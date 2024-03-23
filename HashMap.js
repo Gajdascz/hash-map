@@ -1,12 +1,21 @@
 import { Bucket } from "./Bucket.js";
-import { hash, createMap } from "./utils.js";
+import { hash, createMap, BUCKET_TYPES } from "./utils.js";
 
 const HashMap = ({ loadFactor = 0.75, initialCapacity = 16 } = {}) => {
   let currentCapacity = initialCapacity;
   let currentLoad = 0;
   let map = createMap(initialCapacity);
-  const isInBounds = (index) => {
-    if (index < 0 || index >= map.length) throw new Error("Trying to access index out of bound");
+  let workingHashCode = null;
+  const getBucket = (key, autoAdd = true) => {
+    workingHashCode = hash(key, currentCapacity);
+    if (workingHashCode < 0 || workingHashCode >= map.length) throw new Error("Trying to access index out of bound");
+    const bucket = map[workingHashCode];
+    if (bucket) return bucket;
+    else if (!autoAdd) return null;
+    map[workingHashCode] = Bucket(BUCKET_TYPES.MAP);
+    currentLoad += 1;
+    if (currentLoad / currentCapacity >= loadFactor) grow();
+    return map[workingHashCode];
   };
   const grow = () => {
     currentCapacity *= 2;
@@ -23,11 +32,6 @@ const HashMap = ({ loadFactor = 0.75, initialCapacity = 16 } = {}) => {
       }
     });
   };
-  const addToEmpty = (code, key, value) => {
-    map[code] = Bucket(key, value);
-    currentLoad += 1;
-    if (currentLoad / currentCapacity >= loadFactor) grow();
-  };
   const checkBucketForUpdate = (bucket, key, value) => {
     const nodeData = bucket.getNodeData(key);
     if (!nodeData) return false;
@@ -35,22 +39,26 @@ const HashMap = ({ loadFactor = 0.75, initialCapacity = 16 } = {}) => {
     return true;
   };
   const set = (key, value) => {
-    const code = hash(key, currentCapacity);
-    const bucket = map[code];
-    if (!bucket) addToEmpty(code, key, value);
-    else if (checkBucketForUpdate(bucket, key, value)) return;
-    else bucket.append(key, value);
+    const bucket = getBucket(key, true);
+    if (!checkBucketForUpdate(bucket, key, value)) bucket.append(key, value);
+    workingHashCode = null;
   };
   const get = (key) => {
-    const code = hash(key, currentCapacity);
-    return map[code]?.getNodeData(key)?.value;
+    const nodeValue = getBucket(key, false)?.getNodeData(key)?.value;
+    workingHashCode = null;
+    if (!nodeValue) return null;
+    return nodeValue;
   };
   const has = (key) => !!get(key);
-  return { get, set, has };
+
+  const remove = (key) => {
+    const bucket = getBucket(key, false);
+    if (bucket) {
+      const result = bucket.removeNode(key);
+      if (result && bucket.isEmpty()) map[workingHashCode] = null;
+    }
+    workingHashCode = null;
+    return result;
+  };
+  return { get, set, has, remove };
 };
-
-const test = HashMap();
-test.set("az", 600);
-test.set("zc", 900);
-
-console.log(test.get("zc"));

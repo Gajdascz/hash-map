@@ -1,15 +1,27 @@
-const MapNode = ({ key = null, value = null, next = null }) => ({
+import { BUCKET_TYPES } from "./utils";
+const MapNode = ({ key = null, value = null, next = null, prev = null } = {}) => ({
   data: {
     key,
     value,
   },
   next,
+  prev,
 });
 
-export const Bucket = (key = null, value = null) => {
+const SetNode = ({ key = null, next = null, prev = null } = {}) => ({
+  data: {
+    key,
+  },
+  next,
+  prev,
+});
+
+export const Bucket = (type) => {
   let head = null;
   let tail = null;
   let size = 0;
+
+  const getNode = type === BUCKET_TYPES.MAP ? MapNode : SetNode;
 
   const setFirst = (node) => {
     head = node;
@@ -18,11 +30,23 @@ export const Bucket = (key = null, value = null) => {
   };
 
   const append = (key, value = null) => {
-    const node = MapNode({ key, value });
+    const node = getNode({ key, value });
     if (!head) setFirst(node);
     else {
       tail.next = node;
+      node.prev = tail;
       tail = node;
+      size++;
+    }
+  };
+
+  const prepend = (key, value = null) => {
+    const node = getNode({ key, value });
+    if (!head) setFirst(node);
+    else {
+      head.prev = node;
+      node.next = head;
+      head = node;
       size++;
     }
   };
@@ -35,33 +59,46 @@ export const Bucket = (key = null, value = null) => {
     }
   };
 
-  const removeNode = (key) => {
-    if (head && head.key === key) {
-      head = head.next;
-      if (!head) tail = null;
-      size--;
-      return;
-    }
-    let currentNode = head;
-    while (currentNode && currentNode.next !== null) {
-      if (currentNode.next.key === key) {
-        if (currentNode.next === tail) {
-          tail = currentNode;
-        }
-        currentNode.next = currentNode.next.next;
-        size--;
-        return;
-      }
-      currentNode = currentNode.next;
-    }
+  const removeHead = () => {
+    if (!head) return false;
+    head = head.next;
+    if (head) head.prev = null;
+    else tail = null;
+    size--;
+    return true;
+  };
+  const removeTail = () => {
+    if (!tail) return false;
+    tail = tail.prev;
+    if (tail) tail.next = null;
+    else head = null;
+    size--;
+    return true;
   };
 
-  if (key) append(key, value);
+  const removeNode = (key) => {
+    if (head && head.data.key === key) return removeHead();
+    if (tail.data.key === key) return removeTail();
+    let currentNode = head;
+    while (currentNode) {
+      if (currentNode.data.key === key) {
+        currentNode.prev.next = currentNode.next;
+        if (currentNode.next) currentNode.next.prev = currentNode.prev;
+        size--;
+        return true;
+      } else currentNode = currentNode.next;
+    }
+    return false;
+  };
+
   return {
     getHead: () => head,
     getTail: () => tail,
     getSize: () => size,
+    getType: () => type,
+    isEmpty: () => size === 0,
     append,
+    prepend,
     getNodeData,
     removeNode,
   };

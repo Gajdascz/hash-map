@@ -1,5 +1,8 @@
 const PRIME_FACTOR = 31;
-
+const BUCKET_TYPES = {
+  MAP: "map",
+  SET: "set",
+};
 const hash = (key, capacity) => {
   let hashCode = 0;
   for (let i = 0; i < key.length; i++) {
@@ -9,4 +12,4 @@ const hash = (key, capacity) => {
 };
 const createMap = (capacity) => Array.from({ length: capacity }, () => null);
 
-export { hash, createMap };
+export { BUCKET_TYPES, hash, createMap };

@@ -1,27 +1,33 @@
-import { BUCKET_TYPES } from "./utils";
-const MapNode = ({ key = null, value = null, next = null, prev = null } = {}) => ({
-  data: {
-    key,
-    value,
-  },
-  next,
-  prev,
-});
+export const BUCKET_TYPES = {
+  MAP: "map",
+  SET: "set",
+};
+export const BUCKET_DATA_TYPES = {
+  KEY: "key",
+  VALUE: "value",
+  ENTRY: "entry",
+};
 
-const SetNode = ({ key = null, next = null, prev = null } = {}) => ({
-  data: {
-    key,
-  },
-  next,
-  prev,
-});
+const { MAP, SET } = BUCKET_TYPES;
+const { KEY, VALUE, ENTRY } = BUCKET_DATA_TYPES;
+
+const buildNode = {
+  [SET]: ({ key = null, next = null, prev = null }) => ({
+    data: { key },
+    next,
+    prev,
+  }),
+  [MAP]: ({ key = null, value = null, next = null, prev = null } = {}) => ({
+    data: { key, value },
+    next,
+    prev,
+  }),
+};
 
 export const Bucket = (type) => {
   let head = null;
   let tail = null;
   let size = 0;
-
-  const getNode = type === BUCKET_TYPES.MAP ? MapNode : SetNode;
 
   const setFirst = (node) => {
     head = node;
@@ -30,7 +36,7 @@ export const Bucket = (type) => {
   };
 
   const append = (key, value = null) => {
-    const node = getNode({ key, value });
+    const node = buildNode[type]({ key, value });
     if (!head) setFirst(node);
     else {
       tail.next = node;
@@ -41,7 +47,7 @@ export const Bucket = (type) => {
   };
 
   const prepend = (key, value = null) => {
-    const node = getNode({ key, value });
+    const node = buildNode[type]({ key, value });
     if (!head) setFirst(node);
     else {
       head.prev = node;
@@ -51,12 +57,30 @@ export const Bucket = (type) => {
     }
   };
 
-  const getNodeData = (key) => {
+  const getNode = (key) => {
     let currentNode = head;
     while (currentNode !== null) {
-      if (currentNode.data.key === key) return currentNode.data;
+      if (currentNode.data.key === key) return currentNode;
       currentNode = currentNode.next;
     }
+    return null;
+  };
+
+  const getNodeData = (key) => getNode(key)?.data || null;
+
+  const getAllNodeData = (type = ENTRY) => {
+    const typeStrategy = {
+      [KEY]: (node) => node.data.key,
+      [VALUE]: (node) => node.data.value,
+      [ENTRY]: (node) => [node.data.key, node.data.value],
+    };
+    const dataArr = [];
+    let currentNode = head;
+    while (currentNode) {
+      dataArr.push(typeStrategy[type](currentNode));
+      currentNode = currentNode.next;
+    }
+    return dataArr;
   };
 
   const removeHead = () => {
@@ -77,18 +101,18 @@ export const Bucket = (type) => {
   };
 
   const removeNode = (key) => {
-    if (head && head.data.key === key) return removeHead();
-    if (tail.data.key === key) return removeTail();
-    let currentNode = head;
-    while (currentNode) {
-      if (currentNode.data.key === key) {
-        currentNode.prev.next = currentNode.next;
-        if (currentNode.next) currentNode.next.prev = currentNode.prev;
-        size--;
-        return true;
-      } else currentNode = currentNode.next;
-    }
-    return false;
+    if (head?.data.key === key) return removeHead();
+    if (tail?.data.key === key) return removeTail();
+    const node = getNode(key);
+    if (!node) return false;
+    node.prev.next = node.next;
+    if (node.next) node.next.prev = node.prev;
+    size--;
+    return true;
+  };
+
+  const clear = () => {
+    while (size > 0) removeHead();
   };
 
   return {
@@ -100,6 +124,8 @@ export const Bucket = (type) => {
     append,
     prepend,
     getNodeData,
+    getAllNodeData,
     removeNode,
+    clear,
   };
 };

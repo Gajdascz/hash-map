@@ -1,6 +1,5 @@
-import { beforeEach, it, expect, describe, test } from "vitest";
-import { Bucket } from "./Bucket";
-import { BUCKET_TYPES } from "./utils";
+import { beforeEach, it, expect, describe } from "vitest";
+import { Bucket, BUCKET_TYPES, BUCKET_DATA_TYPES } from "./Bucket";
 
 const testNodes = {
   one: { key: "testOne", value: "Lorem" },
@@ -14,6 +13,7 @@ describe("Bucket Linked List", () => {
     beforeEach(() => (bucket = Bucket(BUCKET_TYPES.MAP)));
     const isHead = (node) => {
       const head = bucket.getHead();
+      console.log(node, head);
       const { key, value } = head.data;
       return key === node.key && value === node.value;
     };
@@ -33,18 +33,24 @@ describe("Bucket Linked List", () => {
       expect(bucket.getTail()).toBe(null);
       expect(bucket.getType()).toBe(BUCKET_TYPES.MAP);
     });
-    it("should set the first node", () => {
+    it("should append the first node", () => {
       addNode(one);
       expect(isHead(one)).toBe(true);
       expect(isTail(one)).toBe(true);
       expect(bucket.getSize()).toBe(1);
     });
-    it("Should set the second node", () => {
+    it("Should append the second node", () => {
       addNode(one);
       addNode(two);
       expect(isHead(one)).toBe(true);
       expect(isTail(two)).toBe(true);
       expect(bucket.getSize()).toBe(2);
+    });
+    it("should prepend nodes correctly", () => {
+      addNode(one);
+      bucket.prepend(three.key, three.value);
+      expect(isHead(three)).toBe(true);
+      expect(isTail(one)).toBe(true);
     });
     it("should return the node's data", () => {
       addAllNodes();
@@ -56,7 +62,7 @@ describe("Bucket Linked List", () => {
       beforeEach(() => addAllNodes());
       it("should remove a node with the given key", () => {
         expect(bucket.removeNode(two.key)).toBe(true);
-        expect(bucket.getNodeData(two)).toBe(undefined);
+        expect(bucket.getNodeData(two)).toBe(null);
       });
       it("should handle removal of the head node", () => {
         expect(bucket.removeNode(one.key)).toBe(true);
@@ -83,6 +89,24 @@ describe("Bucket Linked List", () => {
         expect(bucket.getTail()).toBeNull();
         expect(bucket.isEmpty()).toBe(true);
       });
+    });
+    it("should clear all nodes", () => {
+      addAllNodes();
+      expect(bucket.getSize()).toBe(3);
+      bucket.clear();
+      expect(bucket.getSize()).toBe(0);
+      expect(bucket.getHead()).toBe(null);
+      expect(bucket.getTail()).toBe(null);
+    });
+    it("should return specified data types", () => {
+      addAllNodes();
+      expect(bucket.getAllNodeData(BUCKET_DATA_TYPES.KEY)).toEqual([one.key, two.key, three.key]);
+      expect(bucket.getAllNodeData(BUCKET_DATA_TYPES.VALUE)).toEqual([one.value, two.value, three.value]);
+      expect(bucket.getAllNodeData(BUCKET_DATA_TYPES.ENTRY)).toEqual([
+        [one.key, one.value],
+        [two.key, two.value],
+        [three.key, three.value],
+      ]);
     });
   });
 });

@@ -1,64 +1,51 @@
-import { Bucket } from "./Bucket.js";
-import { hash, createMap, BUCKET_TYPES } from "./utils.js";
+import { BUCKET_TYPES, BUCKET_DATA_TYPES } from "./Bucket.js";
 
-const HashMap = ({ loadFactor = 0.75, initialCapacity = 16 } = {}) => {
-  let currentCapacity = initialCapacity;
-  let currentLoad = 0;
-  let map = createMap(initialCapacity);
-  let workingHashCode = null;
-  const getBucket = (key, autoAdd = true) => {
-    workingHashCode = hash(key, currentCapacity);
-    if (workingHashCode < 0 || workingHashCode >= map.length) throw new Error("Trying to access index out of bound");
-    const bucket = map[workingHashCode];
-    if (bucket) return bucket;
-    else if (!autoAdd) return null;
-    map[workingHashCode] = Bucket(BUCKET_TYPES.MAP);
-    currentLoad += 1;
-    if (currentLoad / currentCapacity >= loadFactor) grow();
-    return map[workingHashCode];
-  };
-  const grow = () => {
-    currentCapacity *= 2;
-    const oldMap = map;
-    map = createMap(currentCapacity);
-    currentLoad = 0;
-    oldMap.forEach((bucket) => {
-      if (bucket) {
-        let currentNode = bucket.getHead();
-        while (currentNode) {
-          set(currentNode.data.key, currentNode.data.value);
-          currentNode = currentNode.next;
-        }
-      }
-    });
-  };
-  const checkBucketForUpdate = (bucket, key, value) => {
-    const nodeData = bucket.getNodeData(key);
-    if (!nodeData) return false;
-    nodeData.value = value;
-    return true;
-  };
-  const set = (key, value) => {
-    const bucket = getBucket(key, true);
-    if (!checkBucketForUpdate(bucket, key, value)) bucket.append(key, value);
-    workingHashCode = null;
-  };
-  const get = (key) => {
-    const nodeValue = getBucket(key, false)?.getNodeData(key)?.value;
-    workingHashCode = null;
-    if (!nodeValue) return null;
-    return nodeValue;
-  };
-  const has = (key) => !!get(key);
+import { HashBase } from "./HashBase.js";
 
-  const remove = (key) => {
-    const bucket = getBucket(key, false);
-    if (bucket) {
-      const result = bucket.removeNode(key);
-      if (result && bucket.isEmpty()) map[workingHashCode] = null;
-    }
-    workingHashCode = null;
-    return result;
+/**
+ * Implements the HashBase to create manage key/value pair data.
+ *
+ * @param {Object} detail Initialization detail.
+ * @returns {Object} HashMap interface.
+ */
+export const HashMap = ({ loadFactor = 0.75, initialCapacity = 16 } = {}) => {
+  const base = HashBase({ loadFactor, initialCapacity, type: BUCKET_TYPES.MAP });
+  const {
+    hash,
+    remove,
+    length,
+    clear,
+    keys,
+    has,
+    currentCapacity,
+    currentLoad,
+    getBucket,
+    setSetFn,
+    setGetFn,
+    getAllBuckets,
+  } = base;
+
+  const get = setGetFn((key) => getBucket(hash(key), false)?.getNodeData(key)?.value);
+  const set = setSetFn((key, value) => {
+    const bucket = getBucket(hash(key), true);
+    const data = bucket.getNodeData(key);
+    if (data) data.value = value;
+    else bucket.append(key, value);
+  });
+  const values = () => getAllBuckets().flatMap((bucket) => bucket.getAllNodeData(BUCKET_DATA_TYPES.VALUE));
+  const entries = () => getAllBuckets().flatMap((bucket) => bucket.getAllNodeData(BUCKET_DATA_TYPES.ENTRY));
+
+  return {
+    get,
+    set,
+    has,
+    remove,
+    length,
+    clear,
+    keys,
+    values,
+    entries,
+    currentCapacity,
+    currentLoad,
   };
-  return { get, set, has, remove };
 };

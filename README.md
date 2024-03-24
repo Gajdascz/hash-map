@@ -11,15 +11,12 @@ The project uses a basic hash formula to focus on the data structures rather tha
 
 ` const hash = (key) => key.split("").reduce((acc, char) => (PRIME_FACTOR * acc + char.charCodeAt(0)) % currentCapacity, 0);`
 
-<details><summary>Function Anatomy and Reasoning</summary>
-- `(key) => key.split("")`:  Converts the key into an array of characters.
+- `(key) => key.split("")`: Converts the key into an array of characters.
 - `reduce((acc,char) => )`: Reduce is used to iteratively calculate a unique hash code for each character.
-- `PRIME_FACTOR * acc + char.charCodeAt(0)`: 
-  - PRIME_FACTOR set to 31 for its properties in hash calculations allowing minimal collisions and ensuring a uniform distribution of hash codes.
-  - acc is modified at each iteration based on the previous result.
-  - char.charCodeAt(0) returns the character code allowing numeric calculation.
-  - `% currentCapacity`: Confines the hash code within the bounds of the current structures index limit.
-</details>
+- `PRIME_FACTOR * acc + char.charCodeAt(0)`:
+  - `PRIME_FACTOR` set to 31 for its properties in hash calculations allowing minimal collisions and ensuring a uniform distribution of hash codes.
+  - `char.charCodeAt(0)` returns the character code allowing numeric calculation.
+  - `% currentCapacity` Confines the hash code within the bounds of the current structures index limit.
 
 ## Bucket
 
